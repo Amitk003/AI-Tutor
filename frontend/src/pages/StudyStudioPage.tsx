@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, BookOpen, Brain, CheckCircle, AlertTriangle, ArrowRight, RefreshCw, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { MarkdownRenderer } from '../components/common/MarkdownRenderer';
@@ -16,6 +16,15 @@ export const StudyStudioPage: React.FC = () => {
 
   const [sessionId] = useState(() => activeSessionId || crypto.randomUUID());
   const [errorMessage, setErrorMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isGenerating]);
 
   const handleSendQuery = async (overrideQuery?: string, answerToSubmit?: string) => {
     const qText = overrideQuery || inputQuery;
@@ -71,9 +80,9 @@ export const StudyStudioPage: React.FC = () => {
     setSelectedOption(optionText);
     if (!currentMiniQuiz) return;
 
-    const isCorrect = optionText.trim().lowerCase === currentMiniQuiz.correct_answer.trim().lowerCase;
+    const isCorrect = optionText.trim().toLowerCase() === currentMiniQuiz.correct_answer.trim().toLowerCase();
     const matchedDistractor = currentMiniQuiz.distractors.find(
-      (d) => d.option_text.trim().lowerCase === optionText.trim().lowerCase
+      (d) => d.option_text.trim().toLowerCase() === optionText.trim().toLowerCase()
     );
 
     try {
@@ -281,6 +290,7 @@ export const StudyStudioPage: React.FC = () => {
               <p className="text-xs text-[#9CA3AF]">Your study session has been recorded and the revision schedule was updated.</p>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Bar */}
@@ -292,15 +302,17 @@ export const StudyStudioPage: React.FC = () => {
             onKeyDown={(e) => e.key === 'Enter' && handleSendQuery()}
             placeholder={`Ask your AI Companion a question about ${activeConcept}...`}
             disabled={isGenerating}
+            aria-label="Study question input"
             className="flex-1 px-4 py-3 bg-[#0B0F17] border border-[#232D3F] rounded-xl text-xs text-white placeholder-[#9CA3AF]/50 focus:outline-none focus:border-[#6366F1]"
           />
 
           <button
             onClick={() => handleSendQuery()}
             disabled={isGenerating || !inputQuery.trim()}
-            className="p-3 bg-[#6366F1] hover:bg-[#6366F1]/90 text-white rounded-xl shadow-lg shadow-[#6366F1]/25 transition-all disabled:opacity-50"
+            aria-label="Send study query"
+            className="p-3 bg-[#6366F1] hover:bg-[#6366F1]/90 text-white rounded-xl shadow-lg shadow-[#6366F1]/25 transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
           >
-            {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}
           </button>
         </div>
       </div>

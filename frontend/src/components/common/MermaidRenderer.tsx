@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+// @ts-ignore
 import mermaid from 'mermaid';
 
 interface MermaidRendererProps {

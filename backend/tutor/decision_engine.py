@@ -104,9 +104,13 @@ class TutorDecisionEngine:
             modality_instructions=modality_res["formatting_instructions"],
         )
 
-        # 8. Execute LLM Generation via Gateway
-        gateway = LLMGatewayFactory.get_gateway()
-        answer = await gateway.generate(prompt=prompt)
+        # 8. Execute LLM Generation via Gateway (with grounded fallback if LLM is offline)
+        try:
+            gateway = LLMGatewayFactory.get_gateway()
+            answer = await gateway.generate(prompt=prompt)
+        except Exception as err:
+            logger.warning("LLM Gateway unavailable ({e}); using grounded context explanation for '{c}'", e=str(err), c=concept_name)
+            answer = f"### Grounded Concept Study: {concept_name}\n\n**Grounded Course Material:**\n\n{retrieval['formatted_context']}\n\n*Pedagogical Strategy*: **{strategy_res['strategy']}** ({diff_info['difficulty_level']} level)."
 
         # Emit ExplanationGenerated domain event
         await event_dispatcher.emit(

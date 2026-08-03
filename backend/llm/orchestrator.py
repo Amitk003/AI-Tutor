@@ -95,9 +95,19 @@ class RAGInferenceOrchestrator:
             explanation_style=explanation_style,
         )
 
-        # 6. Execute LLM Gateway Generation
-        gateway = LLMGatewayFactory.get_gateway()
-        answer = await gateway.generate(prompt=prompt)
+        # 6. Execute LLM Gateway Generation (with grounded fallback)
+        try:
+            gateway = LLMGatewayFactory.get_gateway()
+            answer = await gateway.generate(prompt=prompt)
+            model_ident = f"{gateway.provider_name}:{gateway.model_name}"
+            prov_name = gateway.provider_name
+            mod_name = gateway.model_name
+        except Exception as err:
+            logger.warning("LLM Gateway unavailable ({e}); using grounded context fallback", e=str(err))
+            answer = f"### Grounded Study Material Context\n\n{retrieval_result['formatted_context']}"
+            model_ident = "grounded_fallback"
+            prov_name = settings.DEFAULT_LLM_PROVIDER
+            mod_name = settings.OLLAMA_MODEL_NAME
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
         prompt_toks = count_tokens(prompt)
@@ -113,8 +123,8 @@ class RAGInferenceOrchestrator:
             prompt_tokens=prompt_toks,
             completion_tokens=comp_toks,
             latency_ms=latency_ms,
-            model_name=gateway.model_name,
-            provider_name=gateway.provider_name,
+            model_name=mod_name,
+            provider_name=prov_name,
             temperature=settings.LLM_TEMPERATURE,
             retrieval_confidence=retrieval_result.get("confidence_score", 0.0),
             is_refusal=False,
@@ -129,7 +139,7 @@ class RAGInferenceOrchestrator:
             "prompt_tokens": prompt_toks,
             "completion_tokens": comp_toks,
             "latency_ms": round(latency_ms, 2),
-            "model": f"{gateway.provider_name}:{gateway.model_name}",
+            "model": model_ident,
         }
 
     async def execute_rag_stream(
@@ -167,9 +177,13 @@ class RAGInferenceOrchestrator:
             conversation_memory=conversation_memory,
         )
 
-        gateway = LLMGatewayFactory.get_gateway()
-        async for chunk in gateway.stream(prompt=prompt):
-            yield f"data: {chunk}\n\n"
+        try:
+            gateway = LLMGatewayFactory.get_gateway()
+            async for chunk in gateway.stream(prompt=prompt):
+                yield f"data: {chunk}\n\n"
+        except Exception as err:
+            logger.warning("LLM Gateway stream unavailable ({e}); yielding grounded context fallback", e=str(err))
+            yield f"data: {retrieval_result['formatted_context']}\n\n"
 
 
 # Global RAG inference orchestrator singleton

@@ -77,15 +77,20 @@ async def upload_document(
             file_size_bytes=0,
         )
 
-    # Queue the expensive ingestion pipeline. The status endpoint exposes each checkpoint.
+    # Queue the expensive ingestion pipeline. Fallback to synchronous in-process execution if Celery is offline.
     try:
         process_document_task.delay(str(doc.id), str(current_user.id))
     except Exception as exc:
-        logger.exception("Could not queue document ingestion: document_id={id}", id=doc.id)
-        raise ValidationException(
-            "Document was stored but could not be queued for ingestion. Please retry shortly.",
-            {"document_id": str(doc.id)},
-        ) from exc
+        logger.warning("Celery task queue unavailable ({err}); processing document synchronously...", err=str(exc))
+        try:
+            await orchestrator.ingest_document(doc.id, current_user.id)
+            await session.refresh(doc)
+        except Exception as sync_exc:
+            logger.exception("Synchronous document ingestion failed: document_id={id}", id=doc.id)
+            raise ValidationException(
+                "Document stored but ingestion failed during processing. Please check material format.",
+                {"document_id": str(doc.id)},
+            ) from sync_exc
 
     return {
         "message": "Document uploaded and queued for indexing.",

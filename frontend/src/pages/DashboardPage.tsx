@@ -191,12 +191,16 @@ export const DashboardPage: React.FC = () => {
           ].map((subject) => (
             <div
               key={subject.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open study session for ${subject.name}, active topic ${subject.topic}`}
               onClick={() => handleLaunchQuickSession(subject.topic)}
-              className="glass-card p-6 rounded-2xl border border-[#232D3F] hover:border-[#6366F1]/50 cursor-pointer transition-all duration-300 group hover:-translate-y-1"
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleLaunchQuickSession(subject.topic)}
+              className="glass-card p-6 rounded-2xl border border-[#232D3F] hover:border-[#6366F1]/50 cursor-pointer transition-all duration-300 group hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1] group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-5 h-5" />
+                  <BookOpen className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">
                   {subject.mastery} Mastery
@@ -208,7 +212,7 @@ export const DashboardPage: React.FC = () => {
 
               <div className="mt-6 pt-4 border-t border-[#232D3F] flex items-center justify-between text-xs text-[#9CA3AF]">
                 <span>Active: <strong className="text-white">{subject.topic}</strong></span>
-                <ArrowRight className="w-4 h-4 text-[#6366F1] group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="w-4 h-4 text-[#6366F1] group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </div>
             </div>
           ))}

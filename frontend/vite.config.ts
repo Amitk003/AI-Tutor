@@ -19,4 +19,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          'ui-icons': ['lucide-react'],
+          'math-katex': ['katex'],
+          'diagrams-mermaid': ['mermaid'],
+        },
+      },
+    },
+  },
 });
