@@ -1,0 +1,4 @@
+__pycache__/
+.env
+vector_store/
+uploads/
