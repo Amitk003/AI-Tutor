@@ -3,6 +3,9 @@
 This page lists every endpoint the backend provides. All endpoints start with
 `/api`. Requests and responses are JSON, except file upload.
 
+The web page itself is served by the backend at the root `/` after the frontend
+is built. One address serves both the UI and the API.
+
 ## Documents
 
 ### Upload a file

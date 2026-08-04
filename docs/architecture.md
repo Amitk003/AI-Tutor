@@ -77,7 +77,9 @@ The frontend is a React app in `frontend/`. It has three tabs:
 - Review: spaced repetition cards that are due today.
 
 The frontend is a plain React app with no routing library and no state library.
-It talks to the backend through `src/api.ts`.
+It talks to the backend through `src/api.ts`. The backend serves the built
+frontend files from `frontend/dist` when they exist, so one address serves
+both the UI and the API.
 
 ## How a question flows through the system
 
