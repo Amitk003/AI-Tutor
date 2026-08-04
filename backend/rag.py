@@ -52,26 +52,35 @@ def chunk_text(text: str, size: int | None = None, overlap: int | None = None) -
 
 
 def ingest_file(file_path: str, filename: str) -> str:
-    """Parse, chunk, embed, and store a file. Returns the new document id."""
+    """Parse, chunk, embed, and store a file. Returns the new document id.
+
+    If embedding fails partway, any partial rows are removed so the database
+    never ends up with an empty document.
+    """
     raw_text = parsers.parse_file(file_path)
     if not raw_text.strip():
         raise ValueError("The file has no readable text.")
 
     doc_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO documents (id, filename, created_at) VALUES (?, ?, ?)",
-        (doc_id, filename, db.now()),
-    )
-
     chunks = chunk_text(raw_text)
-    for i in range(0, len(chunks), config.EMBED_BATCH_SIZE):
-        batch = chunks[i : i + config.EMBED_BATCH_SIZE]
-        vectors = llm.embed(batch)
-        for chunk, vector in zip(batch, vectors):
-            db.execute(
-                "INSERT INTO chunks (document_id, content, embedding) VALUES (?, ?, ?)",
-                (doc_id, chunk, _encode(vector)),
-            )
+    try:
+        for i in range(0, len(chunks), config.EMBED_BATCH_SIZE):
+            batch = chunks[i : i + config.EMBED_BATCH_SIZE]
+            vectors = llm.embed(batch)
+            for chunk, vector in zip(batch, vectors):
+                db.execute(
+                    "INSERT INTO chunks (document_id, content, embedding) VALUES (?, ?, ?)",
+                    (doc_id, chunk, _encode(vector)),
+                )
+        db.execute(
+            "INSERT INTO documents (id, filename, created_at) VALUES (?, ?, ?)",
+            (doc_id, filename, db.now()),
+        )
+    except Exception:
+        # Remove partial rows so no empty document survives a failed ingest.
+        db.execute("DELETE FROM chunks WHERE document_id = ?", (doc_id,))
+        db.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+        raise
     return doc_id
 
 
