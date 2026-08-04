@@ -9,13 +9,20 @@ import uuid
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from backend import config
 from backend import db
 from backend import rag
+from backend import tutor
 from backend.llm import llm
 
 app = FastAPI(title="StudyMate", version="1.0.0")
+
+
+class AskRequest(BaseModel):
+    message: str
+    history: list[dict] | None = None
 
 
 @app.on_event("startup")
@@ -37,6 +44,15 @@ def health() -> dict:
         "documents_count": doc_count,
         "llm_connected": llm.ping(),
     }
+
+
+@app.post("/api/ask")
+def ask_question(payload: AskRequest) -> dict:
+    """Answer a question grounded in the user's uploaded material."""
+    if not payload.message.strip():
+        raise HTTPException(status_code=400, detail="Message is empty.")
+    result = tutor.answer_question(payload.message.strip(), payload.history)
+    return result
 
 
 @app.post("/api/documents/upload")

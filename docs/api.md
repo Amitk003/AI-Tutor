@@ -84,19 +84,13 @@ Response:
       "text": "the matching passage",
       "filename": "notes.pdf"
     }
-  ],
-  "quiz": {
-    "question": "Which property defines a binary search tree?",
-    "options": ["...", "...", "...", "..."],
-    "correct_index": 2,
-    "explanation": "Because ..."
-  }
+  ]
 }
 ```
 
-The `quiz` field is optional. The app asks for one mini quiz question with each
-answer. If the model does not return valid JSON for the quiz, the quiz is left out
-instead of failing the request.
+The answer is grounded in the user's uploaded material only. If nothing matches,
+the answer says so. If the AI service is down, the answer shows the closest
+material directly instead of failing.
 
 ## Quiz
 

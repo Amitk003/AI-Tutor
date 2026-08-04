@@ -49,6 +49,8 @@ The endpoints are grouped by feature:
 
 - `rag.py` - ingestion and search. Turns files into chunks, stores them, finds the
   best matching chunks for a question.
+- `tutor.py` - grounded answer generation. Builds a prompt from retrieved chunks
+  and asks the chat model to answer only from them, with citations.
 - `quiz.py` - quiz generation and grading.
 - `revision.py` - spaced repetition math (SM-2).
 - `llm.py` - all calls to the LLM API live here. This is the only file that talks
