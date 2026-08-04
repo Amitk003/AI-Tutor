@@ -7,6 +7,9 @@ import os
 import shutil
 import uuid
 
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -21,7 +24,16 @@ from backend.llm import llm
 from backend.llm import LLMError
 from backend.quiz import QuizSchemaError
 
-app = FastAPI(title="StudyMate", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Create data folders and database tables on start."""
+    config.ensure_dirs()
+    db.connect()
+    yield
+
+
+app = FastAPI(title="StudyMate", version="1.0.0", lifespan=lifespan)
 
 
 class AskRequest(BaseModel):
@@ -44,13 +56,6 @@ class EvaluateRequest(BaseModel):
 class GradeRequest(BaseModel):
     topic: str
     quality: int
-
-
-@app.on_event("startup")
-def startup() -> None:
-    """Create data folders and database tables on start."""
-    config.ensure_dirs()
-    db.connect()
 
 
 @app.get("/api/health")
@@ -146,6 +151,9 @@ def upload_document(file: UploadFile) -> dict:
     except ValueError as exc:
         os.remove(saved_path)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LLMError as exc:
+        os.remove(saved_path)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     finally:
         # Clean up the temporary upload; the text lives in the database now.
         if os.path.exists(saved_path):

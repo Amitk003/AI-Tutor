@@ -68,8 +68,9 @@ class OpenAICompatibleClient:
             raise LLMError(f"LLM API unreachable: {exc}") from exc
 
         if resp.status_code >= 400:
+            hint = " Check the API key and base URL in your .env file." if resp.status_code in (401, 403) else ""
             raise LLMError(
-                f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+                f"LLM API returned status {resp.status_code}: {resp.text[:300]}{hint}"
             )
         return resp.json()
 
@@ -142,8 +143,9 @@ class GeminiClient:
             raise LLMError(f"Gemini API unreachable: {exc}") from exc
 
         if resp.status_code >= 400:
+            hint = " Check the API key in your .env file." if resp.status_code in (401, 403) else ""
             raise LLMError(
-                f"Gemini API returned status {resp.status_code}: {resp.text[:300]}"
+                f"Gemini API returned status {resp.status_code}: {resp.text[:300]}{hint}"
             )
         return resp.json()
 
