@@ -53,6 +53,7 @@ The endpoints are grouped by feature:
 - `revision.py` - spaced repetition math (SM-2).
 - `llm.py` - all calls to the LLM API live here. This is the only file that talks
   to the outside provider, so changing provider only touches this file and config.
+  Two providers are supported: any OpenAI-compatible API and Google Gemini.
 - `config.py` - reads settings from environment variables.
 - `db.py` - opens the SQLite database and provides small helper functions.
 

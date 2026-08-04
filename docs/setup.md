@@ -6,13 +6,9 @@ How to get this project running on your machine. Follow the steps in order.
 
 - Python 3.11 or newer.
 - Node.js 18 or newer (only needed to build the frontend once).
-- An LLM API account that is OpenAI-compatible. Any of these work:
-  - OpenAI
-  - DeepSeek
-  - Groq
-  - OpenRouter
-  - Together AI
-  - Any other provider that supports the OpenAI chat format.
+- An LLM API key from one of these options:
+  - Any OpenAI-compatible provider (OpenAI, DeepSeek, Groq, OpenRouter, Together AI).
+  - Google Gemini (key from Google AI Studio).
 
 No other services are needed. No Docker, no Postgres, no Redis, no local model.
 
@@ -22,9 +18,13 @@ Copy the example file and fill in your values.
 
 Create a file named `.env` in the project root. Use `.env.example` as a template.
 
-The four values you must set:
+The `.env` file has two sets of keys: one for OpenAI-compatible providers and
+one for Gemini. Set which one you use with `LLM_PROVIDER`.
+
+### Option A: OpenAI-compatible provider
 
 ```
+LLM_PROVIDER=openai
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=your-secret-key-here
 LLM_MODEL=gpt-4o-mini
@@ -38,9 +38,20 @@ Explanation:
 - `LLM_MODEL` - the model used for chat answers and quiz questions.
 - `EMBED_MODEL` - the model used to turn text into numbers for search.
 
-If you use a different provider, change the base URL and model names. For example
-for DeepSeek the base URL is `https://api.deepseek.com/v1` and the model is
-`deepseek-chat`.
+If you use a different provider, change the base URL and model names. For
+for example for DeepSeek the base URL is `https://api.deepseek.com/v1` and the
+model is `deepseek-chat`.
+
+### Option B: Google Gemini
+
+```
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-key-here
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_EMBED_MODEL=text-embedding-004
+```
+
+Get the Gemini key from Google AI Studio: https://aistudio.google.com.
 
 ## Step 2: Install the backend
 
