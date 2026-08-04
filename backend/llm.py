@@ -164,7 +164,18 @@ class GeminiClient:
                 ]
             },
         )
-        return [item["embedding"]["values"] for item in body["embeddings"]]
+        result = []
+        for item in body["embeddings"]:
+            # Newer models (gemini-embedding-001 and newer) return the values
+            # at item["values"]; older models nested them at
+            # item["embedding"]["values"]. Accept both.
+            if "values" in item:
+                result.append(item["values"])
+            elif "embedding" in item and "values" in item["embedding"]:
+                result.append(item["embedding"]["values"])
+            else:
+                raise LLMError(f"Unexpected Gemini embedding shape: {item}")
+        return result
 
     def embed_one(self, text: str) -> list[float]:
         return self.embed([text])[0]

@@ -36,7 +36,7 @@ EMBED_MODEL: str = _get("EMBED_MODEL", "text-embedding-3-small")
 GEMINI_BASE_URL: str = _get("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
 GEMINI_API_KEY: str = _get("GEMINI_API_KEY", "")
 GEMINI_MODEL: str = _get("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_EMBED_MODEL: str = _get("GEMINI_EMBED_MODEL", "text-embedding-004")
+GEMINI_EMBED_MODEL: str = _get("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 
 # Request limits.
 LLM_TIMEOUT_SECONDS: float = float(_get("LLM_TIMEOUT_SECONDS", "120"))
