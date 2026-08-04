@@ -48,7 +48,7 @@ model is `deepseek-chat`.
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your-gemini-key-here
 GEMINI_MODEL=gemini-2.0-flash
-GEMINI_EMBED_MODEL=text-embedding-004
+GEMINI_EMBED_MODEL=gemini-embedding-001
 ```
 
 Get the Gemini key from Google AI Studio: https://aistudio.google.com.

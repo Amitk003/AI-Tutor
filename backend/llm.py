@@ -68,8 +68,9 @@ class OpenAICompatibleClient:
             raise LLMError(f"LLM API unreachable: {exc}") from exc
 
         if resp.status_code >= 400:
+            hint = " Check the API key and base URL in your .env file." if resp.status_code in (401, 403) else ""
             raise LLMError(
-                f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
+                f"LLM API returned status {resp.status_code}: {resp.text[:300]}{hint}"
             )
         return resp.json()
 
@@ -142,8 +143,9 @@ class GeminiClient:
             raise LLMError(f"Gemini API unreachable: {exc}") from exc
 
         if resp.status_code >= 400:
+            hint = " Check the API key in your .env file." if resp.status_code in (401, 403) else ""
             raise LLMError(
-                f"Gemini API returned status {resp.status_code}: {resp.text[:300]}"
+                f"Gemini API returned status {resp.status_code}: {resp.text[:300]}{hint}"
             )
         return resp.json()
 
@@ -162,7 +164,18 @@ class GeminiClient:
                 ]
             },
         )
-        return [item["embedding"]["values"] for item in body["embeddings"]]
+        result = []
+        for item in body["embeddings"]:
+            # Newer models (gemini-embedding-001 and newer) return the values
+            # at item["values"]; older models nested them at
+            # item["embedding"]["values"]. Accept both.
+            if "values" in item:
+                result.append(item["values"])
+            elif "embedding" in item and "values" in item["embedding"]:
+                result.append(item["embedding"]["values"])
+            else:
+                raise LLMError(f"Unexpected Gemini embedding shape: {item}")
+        return result
 
     def embed_one(self, text: str) -> list[float]:
         return self.embed([text])[0]
