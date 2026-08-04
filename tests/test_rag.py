@@ -1,5 +1,7 @@
 """Tests for ingestion and retrieval (uses fake embeddings)."""
 
+import unittest.mock as mock
+
 from backend import config
 from backend import db
 from backend import rag
@@ -51,3 +53,19 @@ class TestChunkEncode:
         # Floats are stored as float32, so compare approximately.
         for a, b in zip(decoded, original):
             assert abs(a - b) < 1e-5
+
+
+class TestIngestFailure:
+    def test_failed_embed_leaves_no_orphan(self, temp_db, sample_file):
+        """If embedding fails, no document row should remain."""
+        from backend.llm import llm as llm_client
+        with mock.patch.object(llm_client, "embed", side_effect=RuntimeError("api down")):
+            try:
+                rag.ingest_file(sample_file, "notes.md")
+                raise AssertionError("expected RuntimeError")
+            except RuntimeError:
+                pass
+        docs = db.query("SELECT COUNT(*) AS n FROM documents")[0]["n"]
+        chunks = db.query("SELECT COUNT(*) AS n FROM chunks")[0]["n"]
+        assert docs == 0
+        assert chunks == 0
