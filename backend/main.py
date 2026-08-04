@@ -15,6 +15,7 @@ from backend import config
 from backend import db
 from backend import quiz
 from backend import rag
+from backend import revision
 from backend import tutor
 from backend.llm import llm
 from backend.llm import LLMError
@@ -37,6 +38,12 @@ class EvaluateRequest(BaseModel):
     selected_index: int
     correct_index: int
     explanation: str | None = None
+    topic: str | None = None
+
+
+class GradeRequest(BaseModel):
+    topic: str
+    quality: int
 
 
 @app.on_event("startup")
@@ -85,12 +92,32 @@ def generate_quiz(payload: QuizRequest) -> dict:
 
 @app.post("/api/quiz/evaluate")
 def evaluate_answer(payload: EvaluateRequest) -> dict:
-    """Grade a quiz answer."""
-    return quiz.evaluate(
+    """Grade a quiz answer. If correct and a topic is given, schedule it."""
+    result = quiz.evaluate(
         selected_index=payload.selected_index,
         correct_index=payload.correct_index,
         explanation=payload.explanation,
     )
+    if result["correct"] and payload.topic and payload.topic.strip():
+        revision.schedule(payload.topic.strip())
+    return result
+
+
+@app.get("/api/revision")
+def get_due_revisions() -> dict:
+    """Return topics that are due for review."""
+    return {"revisions": revision.get_due_revisions()}
+
+
+@app.post("/api/revision/grade")
+def grade_revision(payload: GradeRequest) -> dict:
+    """Apply a quality grade (0-5) to a topic's spaced repetition card."""
+    if not payload.topic.strip():
+        raise HTTPException(status_code=400, detail="Topic is empty.")
+    try:
+        return revision.grade(payload.topic.strip(), payload.quality)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/documents/upload")
