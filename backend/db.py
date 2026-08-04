@@ -48,6 +48,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Public alias so other modules do not touch the private helper.
+now = _now
+
+
 def connect() -> sqlite3.Connection:
     """Open the database connection (created once, reused after)."""
     global _connection
