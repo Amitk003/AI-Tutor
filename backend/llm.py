@@ -1,16 +1,20 @@
-"""LLM API client.
+"""LLM API clients.
 
 The only module that talks to the outside AI provider. Everything else in the
-app calls these functions. The provider must be OpenAI-compatible (OpenAI,
-DeepSeek, Groq, OpenRouter, and similar all work).
+app calls these functions. Two providers are supported, chosen by the
+LLM_PROVIDER config value:
 
-Two jobs:
-  embed(texts) - turn text into a list of numbers (for search).
+  "openai" - any OpenAI-compatible API (OpenAI, DeepSeek, Groq, OpenRouter).
+  "gemini" - Google Gemini API.
+
+Each provider implements the same interface:
+
+  embed(texts) - turn text into numbers (for search).
   chat(system, user) - get a text answer from the chat model.
+  ping() - check the provider is reachable.
 """
 
-import json
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 
@@ -21,8 +25,20 @@ class LLMError(Exception):
     """Raised when the LLM API cannot be reached or returns an error."""
 
 
-class LLMClient:
-    """Small wrapper around the OpenAI-compatible HTTP API."""
+class LLMClient(Protocol):
+    """What every provider client must support."""
+
+    def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+    def embed_one(self, text: str) -> list[float]: ...
+
+    def chat(self, system: str, user: str) -> str: ...
+
+    def ping(self) -> bool: ...
+
+
+class OpenAICompatibleClient:
+    """Client for any OpenAI-compatible API."""
 
     def __init__(
         self,
@@ -39,7 +55,6 @@ class LLMClient:
         }
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """POST to the API and return the JSON body, or raise LLMError."""
         if not self.api_key:
             raise LLMError("LLM_API_KEY is not set. See docs/setup.md.")
         try:
@@ -53,30 +68,25 @@ class LLMClient:
             raise LLMError(f"LLM API unreachable: {exc}") from exc
 
         if resp.status_code >= 400:
-            detail = resp.text[:300]
             raise LLMError(
-                f"LLM API returned status {resp.status_code}: {detail}"
+                f"LLM API returned status {resp.status_code}: {resp.text[:300]}"
             )
         return resp.json()
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        """Embed a list of texts. Returns one vector per text."""
         if not texts:
             return []
         body = self._post(
             "embeddings",
             {"model": config.EMBED_MODEL, "input": texts},
         )
-        # The API may return data out of order, so map by index.
         ordered = sorted(body["data"], key=lambda item: item["index"])
         return [item["embedding"] for item in ordered]
 
     def embed_one(self, text: str) -> list[float]:
-        """Embed a single text."""
         return self.embed([text])[0]
 
     def chat(self, system: str, user: str) -> str:
-        """Send one chat request and return the assistant text."""
         body = self._post(
             "chat/completions",
             {
@@ -91,10 +101,9 @@ class LLMClient:
         try:
             return body["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError, AttributeError) as exc:
-            raise LLMError(f"Unexpected LLM response shape: {json.dumps(body)[:300]}") from exc
+            raise LLMError(f"Unexpected LLM response shape: {body}") from exc
 
     def ping(self) -> bool:
-        """Check that the provider is reachable and the key works."""
         try:
             self.embed_one("ping")
             return True
@@ -102,5 +111,93 @@ class LLMClient:
             return False
 
 
+class GeminiClient:
+    """Client for the Google Gemini API."""
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        self.base_url = (base_url or config.GEMINI_BASE_URL).rstrip("/")
+        self.api_key = api_key or config.GEMINI_API_KEY
+        self.timeout = timeout or config.LLM_TIMEOUT_SECONDS
+        self._headers = {
+            "x-goog-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
+
+    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if not self.api_key:
+            raise LLMError("GEMINI_API_KEY is not set. See docs/setup.md.")
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.post(
+                    f"{self.base_url}/{path}",
+                    headers=self._headers,
+                    json=payload,
+                )
+        except httpx.HTTPError as exc:
+            raise LLMError(f"Gemini API unreachable: {exc}") from exc
+
+        if resp.status_code >= 400:
+            raise LLMError(
+                f"Gemini API returned status {resp.status_code}: {resp.text[:300]}"
+            )
+        return resp.json()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        body = self._post(
+            f"models/{config.GEMINI_EMBED_MODEL}:batchEmbedContents",
+            {
+                "requests": [
+                    {
+                        "model": f"models/{config.GEMINI_EMBED_MODEL}",
+                        "content": {"parts": [{"text": text}]},
+                    }
+                    for text in texts
+                ]
+            },
+        )
+        return [item["embedding"]["values"] for item in body["embeddings"]]
+
+    def embed_one(self, text: str) -> list[float]:
+        return self.embed([text])[0]
+
+    def chat(self, system: str, user: str) -> str:
+        payload: dict[str, Any] = {
+            "contents": [{"role": "user", "parts": [{"text": user}]}],
+        }
+        if system:
+            payload["systemInstruction"] = {"parts": [{"text": system}]}
+        body = self._post(
+            f"models/{config.GEMINI_MODEL}:generateContent",
+            payload,
+        )
+        try:
+            parts = body["candidates"][0]["content"]["parts"]
+            return "".join(part.get("text", "") for part in parts).strip()
+        except (KeyError, IndexError, AttributeError) as exc:
+            raise LLMError(f"Unexpected Gemini response shape: {body}") from exc
+
+    def ping(self) -> bool:
+        try:
+            self.embed_one("ping")
+            return True
+        except LLMError:
+            return False
+
+
+def get_client() -> LLMClient:
+    """Return the client for the configured provider."""
+    provider = config.LLM_PROVIDER.lower()
+    if provider == "gemini":
+        return GeminiClient()
+    return OpenAICompatibleClient()
+
+
 # Shared client used across the app.
-llm = LLMClient()
+llm = get_client()

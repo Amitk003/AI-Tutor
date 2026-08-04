@@ -16,7 +16,13 @@ def _get(name: str, default: str) -> str:
     return os.getenv(name, default)
 
 
-# LLM provider settings (OpenAI-compatible API).
+# LLM provider settings.
+# LLM_PROVIDER chooses which API format to use:
+#   "openai" - any OpenAI-compatible API (OpenAI, DeepSeek, Groq, OpenRouter).
+#   "gemini" - Google Gemini API.
+LLM_PROVIDER: str = _get("LLM_PROVIDER", "openai")
+
+# OpenAI-compatible settings.
 # Examples for LLM_BASE_URL:
 #   OpenAI:     https://api.openai.com/v1
 #   DeepSeek:   https://api.deepseek.com/v1
@@ -25,6 +31,12 @@ LLM_BASE_URL: str = _get("LLM_BASE_URL", "https://api.openai.com/v1")
 LLM_API_KEY: str = _get("LLM_API_KEY", "")
 LLM_MODEL: str = _get("LLM_MODEL", "gpt-4o-mini")
 EMBED_MODEL: str = _get("EMBED_MODEL", "text-embedding-3-small")
+
+# Gemini settings.
+GEMINI_BASE_URL: str = _get("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+GEMINI_API_KEY: str = _get("GEMINI_API_KEY", "")
+GEMINI_MODEL: str = _get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_EMBED_MODEL: str = _get("GEMINI_EMBED_MODEL", "text-embedding-004")
 
 # Request limits.
 LLM_TIMEOUT_SECONDS: float = float(_get("LLM_TIMEOUT_SECONDS", "120"))
