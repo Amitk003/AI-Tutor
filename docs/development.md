@@ -86,14 +86,28 @@ If a provider needs a different format, change only `backend/llm.py`.
 
 ## Running the tests
 
-The project keeps a small test suite. Run it from the project root:
+The project keeps a proper pytest suite. Run it from the project root:
 
 ```
 python -m pytest tests/
 ```
 
-Tests focus on pure logic (chunking, retrieval math, SM-2, quiz JSON parsing) so
-they do not need an LLM API key.
+Install the test tools first:
+
+```
+pip install -r backend/requirements-dev.txt
+```
+
+The tests use fake embeddings and a temporary database, so they never need an
+LLM API key and never touch real data.
+
+Test areas:
+
+- test_parsing.py - file parsing and chunking.
+- test_rag.py - ingestion, retrieval, and vector storage.
+- test_chat.py - grounded answers and fallbacks.
+- test_quiz.py - quiz JSON parsing, generation, and evaluation.
+- test_revision.py - SM-2 spacing and scheduling.
 
 ## Things that need the owner
 
