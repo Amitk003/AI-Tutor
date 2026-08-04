@@ -94,16 +94,45 @@ material directly instead of failing.
 
 ## Quiz
 
+### Generate quiz questions
+
+```
+POST /api/quiz/generate
+{
+  "question": "binary search tree",
+  "count": 3
+}
+```
+
+`count` is optional and defaults to 3.
+
+The questions are generated from the user's uploaded material. The model
+returns strict JSON, which is validated. If the JSON is invalid the server
+retries up to 3 times, then returns a 422 error instead of crashing.
+
+Response:
+
+```json
+{
+  "questions": [
+    {
+      "question": "Which property holds in a binary search tree?",
+      "options": ["a", "b", "c", "d"],
+      "correct_index": 0,
+      "explanation": "The left child holds a smaller key."
+    }
+  ]
+}
+```
+
 ### Evaluate a quiz answer
 
 ```
 POST /api/quiz/evaluate
 {
-  "question": "Which property defines a binary search tree?",
-  "options": ["a", "b", "c", "d"],
   "selected_index": 2,
-  "correct_index": 2,
-  "topic": "Binary Search Tree"
+  "correct_index": 0,
+  "explanation": "The left child holds a smaller key."
 }
 ```
 
@@ -111,12 +140,12 @@ Response:
 
 ```json
 {
-  "correct": true,
-  "explanation": "Because ..."
+  "correct": false,
+  "explanation": "The left child holds a smaller key.",
+  "selected_index": 2,
+  "correct_index": 0
 }
 ```
-
-If the answer is correct, the topic is added or updated in the revision schedule.
 
 ## Review
 

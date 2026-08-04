@@ -13,9 +13,12 @@ from pydantic import BaseModel
 
 from backend import config
 from backend import db
+from backend import quiz
 from backend import rag
 from backend import tutor
 from backend.llm import llm
+from backend.llm import LLMError
+from backend.quiz import QuizSchemaError
 
 app = FastAPI(title="StudyMate", version="1.0.0")
 
@@ -23,6 +26,17 @@ app = FastAPI(title="StudyMate", version="1.0.0")
 class AskRequest(BaseModel):
     message: str
     history: list[dict] | None = None
+
+
+class QuizRequest(BaseModel):
+    question: str
+    count: int = 3
+
+
+class EvaluateRequest(BaseModel):
+    selected_index: int
+    correct_index: int
+    explanation: str | None = None
 
 
 @app.on_event("startup")
@@ -53,6 +67,30 @@ def ask_question(payload: AskRequest) -> dict:
         raise HTTPException(status_code=400, detail="Message is empty.")
     result = tutor.answer_question(payload.message.strip(), payload.history)
     return result
+
+
+@app.post("/api/quiz/generate")
+def generate_quiz(payload: QuizRequest) -> dict:
+    """Generate multiple choice questions from the study material."""
+    if not payload.question.strip():
+        raise HTTPException(status_code=400, detail="Question is empty.")
+    try:
+        questions = quiz.generate_quiz(payload.question.strip(), payload.count)
+    except QuizSchemaError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"questions": questions}
+
+
+@app.post("/api/quiz/evaluate")
+def evaluate_answer(payload: EvaluateRequest) -> dict:
+    """Grade a quiz answer."""
+    return quiz.evaluate(
+        selected_index=payload.selected_index,
+        correct_index=payload.correct_index,
+        explanation=payload.explanation,
+    )
 
 
 @app.post("/api/documents/upload")
