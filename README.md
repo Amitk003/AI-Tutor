@@ -40,8 +40,8 @@ you and schedules reviews so you never forget.
 
 ## Quick start
 
-You need Python 3.11+, Node.js 18+, and an OpenAI-compatible API key (OpenAI,
-DeepSeek, Groq, OpenRouter, and more all work).
+You need Python 3.11+, Node.js 18+, and an LLM API key: any OpenAI-compatible
+provider (OpenAI, DeepSeek, Groq, OpenRouter, and more) or Google Gemini.
 
 ```
 pip install -r backend/requirements.txt
@@ -51,15 +51,16 @@ uvicorn backend.main:app --port 8000
 
 Then open http://localhost:8000
 
-See `docs/setup.md` for the full guide, including how to set your API keys.
+Set your API keys in a `.env` file first. See `docs/setup.md` for the full
+guide, including both provider options.
 
 ## Project structure
 
 ```
 backend/    FastAPI server, all logic, serves the frontend too.
 frontend/   React web app (Notes, Ask, Review).
-docs/       Setup, architecture, API reference, decisions.
-tests/      Focused tests for the core logic.
+docs/       Setup, architecture, API reference, decisions, deployment.
+tests/      pytest suite for the core logic.
 ```
 
 ## Documentation
@@ -69,6 +70,7 @@ tests/      Focused tests for the core logic.
 - API reference: `docs/api.md`
 - Development guide: `docs/development.md`
 - Design decisions: `docs/decisions.md`
+- Deployment: `docs/deployment.md`
 
 ## License
 
