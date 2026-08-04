@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend import config
 from backend import db
+from backend.llm import llm
 
 app = FastAPI(title="StudyMate", version="1.0.0")
 
@@ -23,12 +24,16 @@ def startup() -> None:
 
 @app.get("/api/health")
 def health() -> dict:
-    """Check that the app and the database are ready."""
+    """Check that the app, the database, and the LLM connection are ready."""
     try:
         doc_count = db.query("SELECT COUNT(*) AS n FROM documents")[0]["n"]
     except Exception as exc:  # pragma: no cover
         raise HTTPException(status_code=500, detail="database not ready") from exc
-    return {"status": "ok", "documents_count": doc_count}
+    return {
+        "status": "ok",
+        "documents_count": doc_count,
+        "llm_connected": llm.ping(),
+    }
 
 
 # Serve the built frontend if it exists (after `npm run build`).
